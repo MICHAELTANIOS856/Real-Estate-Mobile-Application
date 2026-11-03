@@ -1,17 +1,36 @@
-# real_estate_app
+# Real Estate Egypt
 
-A new Flutter project.
+A Flutter mobile application for discovering and listing rental and sale properties across Egypt. The project aims to help property seekers find relevant, up-to-date listings and help owners publish and manage their properties.
 
-## Getting Started
+## Planned Features
 
-This project is a starting point for a Flutter application.
+- Browse properties for rent or sale
+- Search by governorate, city, district, and price
+- Filter by property type and features
+- View property details, photos, and location
+- Save favorite properties
+- Send inquiries and request viewings inside the app
+- Let owners create and manage listings
+- Confirm listing availability to help keep information current
+- Report listings for review
 
-A few resources to get you started if this is your first Flutter project:
+## Technology
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Flutter** and **Dart** for the mobile application
+- **Supabase** for authentication, database, and image storage
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Project Status
+
+This project is under development as an academic project. Features and technical details may change as the project evolves.
+
+## Initial Business Approach
+
+The application is planned to be free for property owners and seekers during its initial launch. Optional revenue features may be considered in the future.
+
+## Target Market
+
+The application is designed for users across all governorates of Egypt. The initial launch is planned as a pilot in a selected area before expanding.
+
+## License
+
+No open-source license has been added yet.
