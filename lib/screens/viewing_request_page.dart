@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../models/property.dart';
@@ -18,6 +19,7 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
 
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
+  bool isSubmitting = false;
   bool requestSent = false;
 
   @override
@@ -59,10 +61,10 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
     }
   }
 
-  void submitRequest() {
-    final formIsValid = _formKey.currentState!.validate();
+  Future<void> submitRequest() async {
+    if (isSubmitting || requestSent) return;
 
-    if (!formIsValid) return;
+    if (!_formKey.currentState!.validate()) return;
 
     if (selectedDate == null || selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,12 +74,60 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
     }
 
     setState(() {
-      requestSent = true;
+      isSubmitting = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم تسجيل طلب المعاينة بنجاح')),
-    );
+    final property = widget.property;
+
+    try {
+      await FirebaseFirestore.instance.collection('viewing_requests').add({
+        'customerName': _nameController.text.trim(),
+        'customerPhone': _phoneController.text.trim(),
+        'propertyId': property.id,
+        'propertyTitle': property.title,
+        'location': property.location,
+        'governorate': property.governorate,
+        'requestedDate': Timestamp.fromDate(selectedDate!),
+        'requestedTime': selectedTime!.format(context),
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        requestSent = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إرسال طلب المعاينة وحفظه بنجاح')),
+      );
+    } on FirebaseException catch (error) {
+      debugPrint('Firestore error: ${error.code} - ${error.message}');
+
+      if (!mounted) return;
+
+      final message = error.code == 'permission-denied'
+          ? 'قواعد قاعدة البيانات لا تسمح بحفظ الطلب'
+          : 'تعذر حفظ الطلب. تأكد من اتصال الإنترنت وحاول مرة أخرى';
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      debugPrint('Unexpected error while saving request: $error');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('حدث خطأ غير متوقع أثناء حفظ الطلب')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -202,7 +252,7 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: requestSent ? null : submitRequest,
+                  onPressed: isSubmitting || requestSent ? null : submitRequest,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF174C3C),
                     foregroundColor: Colors.white,
@@ -211,13 +261,22 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: Text(
-                    requestSent ? 'تم إرسال الطلب' : 'إرسال طلب المعاينة',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 23,
+                          height: 23,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          requestSent ? 'تم إرسال الطلب' : 'إرسال طلب المعاينة',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
               ),
             ],

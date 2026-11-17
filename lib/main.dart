@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import 'firebase_options.dart';
 import 'models/property.dart';
 import 'screens/property_details_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const RealEstateApp());
 }
 
@@ -317,7 +323,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeroBanner() {
     return Container(
-      height: 180,
+      height: 200,
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
