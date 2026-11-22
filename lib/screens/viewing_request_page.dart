@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/property.dart';
+import 'auth_page.dart';
 
 class ViewingRequestPage extends StatefulWidget {
   const ViewingRequestPage({super.key, required this.property});
@@ -73,6 +75,26 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
       return;
     }
 
+    if (FirebaseAuth.instance.currentUser == null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthPage()),
+      );
+      if (!mounted || FirebaseAuth.instance.currentUser == null) return;
+    }
+    final appointment = DateTime(
+      selectedDate!.year,
+      selectedDate!.month,
+      selectedDate!.day,
+      selectedTime!.hour,
+      selectedTime!.minute,
+    );
+    if (!appointment.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('اختر موعدًا في المستقبل')));
+      return;
+    }
     setState(() {
       isSubmitting = true;
     });
@@ -90,6 +112,8 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
         'requestedDate': Timestamp.fromDate(selectedDate!),
         'requestedTime': selectedTime!.format(context),
         'status': 'pending',
+        'userId': FirebaseAuth.instance.currentUser?.uid,
+        'ownerId': property.ownerId,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
