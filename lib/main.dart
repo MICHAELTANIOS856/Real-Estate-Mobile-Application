@@ -1,3 +1,5 @@
+import 'widgets/property_image.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -667,7 +669,7 @@ class _HomePageState extends State<HomePage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
+                  PropertyImage(
                     property.imageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
