@@ -43,6 +43,9 @@ class PropertyPhotos {
       throw const FormatException('تعذر قراءة الصورة، اختر JPEG أو PNG');
     }
     var image = img.bakeOrientation(decoded);
+    // Preserve pixel orientation, not camera location or other EXIF metadata.
+    image.exif = img.ExifData();
+    image.iccProfile = null;
     if (image.width > maxDimension || image.height > maxDimension) {
       image = img.copyResize(
         image,
