@@ -1,9 +1,14 @@
-import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
 import 'models/property.dart';
+import 'screens/add_property_page.dart';
+import 'screens/auth_page.dart';
+import 'screens/my_properties_page.dart';
 import 'screens/property_details_page.dart';
+import 'services/properties_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,76 +52,15 @@ class _HomePageState extends State<HomePage> {
   String searchText = '';
 
   final Set<String> favoriteIds = {};
+  late final Stream<List<Property>> _propertiesStream =
+      PropertiesService.watchAvailableProperties();
 
   final List<String> governorates = const [
     'الكل',
-    'القاهرة',
-    'الجيزة',
-    'الإسكندرية',
-    'المنصورة',
-    'أسيوط',
+    ...AddPropertyPage.governorates,
   ];
 
-  final List<Property> properties = const [
-    Property(
-      id: '1',
-      title: 'شقة عصرية بإطلالة مميزة',
-      type: 'شقة',
-      location: 'التجمع الخامس',
-      governorate: 'القاهرة',
-      mode: ListingMode.rent,
-      price: 12000,
-      bedrooms: 3,
-      bathrooms: 2,
-      area: 160,
-      imageUrl: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85',
-      lastConfirmed: 'اليوم',
-    ),
-    Property(
-      id: '2',
-      title: 'شقة واسعة بالقرب من الخدمات',
-      type: 'شقة',
-      location: 'الشيخ زايد',
-      governorate: 'الجيزة',
-      mode: ListingMode.rent,
-      price: 18000,
-      bedrooms: 3,
-      bathrooms: 2,
-      area: 190,
-      imageUrl: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=85',
-      lastConfirmed: 'منذ يومين',
-    ),
-    Property(
-      id: '3',
-      title: 'فيلا مميزة بحديقة خاصة',
-      type: 'فيلا',
-      location: 'الساحل الشمالي',
-      governorate: 'الإسكندرية',
-      mode: ListingMode.rent,
-      price: 25000,
-      bedrooms: 4,
-      bathrooms: 3,
-      area: 280,
-      imageUrl: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=85',
-      lastConfirmed: 'اليوم',
-    ),
-    Property(
-      id: '4',
-      title: 'شقة للبيع بتصميم أنيق',
-      type: 'شقة',
-      location: 'مدينة نصر',
-      governorate: 'القاهرة',
-      mode: ListingMode.sale,
-      price: 2400000,
-      bedrooms: 3,
-      bathrooms: 2,
-      area: 155,
-      imageUrl: 'https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=1200&q=85',
-      lastConfirmed: 'منذ يوم',
-    ),
-  ];
-
-  List<Property> get filteredProperties {
+  List<Property> filterProperties(List<Property> properties) {
     return properties.where((property) {
       final matchesMode = property.mode == selectedMode;
 
@@ -167,108 +111,266 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final visibleProperties = filteredProperties;
+  Future<void> openAddProperty() async {
+    var user = FirebaseAuth.instance.currentUser;
 
-    return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: _buildHeader(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-                child: _buildHeroBanner(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                child: _buildSearchField(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-                child: _buildModeSelector(),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                child: _buildSectionHeader(visibleProperties.length),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 42,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: governorates.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final governorate = governorates[index];
-                    final isSelected = governorate == selectedGovernorate;
+    if (user == null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthPage()),
+      );
+      if (!mounted) return;
+      user = FirebaseAuth.instance.currentUser;
+    }
 
-                    return ChoiceChip(
-                      label: Text(governorate),
-                      selected: isSelected,
-                      showCheckmark: false,
-                      selectedColor: const Color(0xFF174C3C),
-                      backgroundColor: Colors.white,
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.w600,
+    if (user == null) return;
+
+    final published = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const AddPropertyPage()),
+    );
+
+    if (!mounted) return;
+    if (published == true) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم نشر عقارك بنجاح')));
+    }
+  }
+
+  Future<void> openAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthPage()),
+      );
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Color(0xFF174C3C),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  user.displayName?.isNotEmpty == true
+                      ? user.displayName!
+                      : 'حسابي',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF20302A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email ?? '',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.home_work_outlined),
+                  title: const Text('عقاراتي'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      this.context,
+                      MaterialPageRoute(
+                        builder: (_) => const MyPropertiesPage(),
                       ),
-                      side: BorderSide(
-                        color: isSelected
-                            ? const Color(0xFF174C3C)
-                            : const Color(0xFFE7E4DC),
-                      ),
-                      onSelected: (_) {
-                        setState(() {
-                          selectedGovernorate = governorate;
-                        });
-                      },
                     );
                   },
                 ),
-              ),
-            ),
-            if (visibleProperties.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyState(),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final property = visibleProperties[index];
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 18),
-                      child: _buildPropertyCard(property),
-                    );
-                  }, childCount: visibleProperties.length),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: const BorderSide(color: Colors.redAccent),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text(
+                      'تسجيل الخروج',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-              ),
-          ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: openAddProperty,
+        backgroundColor: const Color(0xFF174C3C),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_home_work_rounded),
+        label: const Text(
+          'أضف عقارك',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SafeArea(
+        child: StreamBuilder<List<Property>>(
+          stream: _propertiesStream,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'تعذر تحميل العقارات. تأكد من الاتصال وإعدادات Firebase.',
+                  ),
+                ),
+              );
+            }
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final visibleProperties = filterProperties(
+              snapshot.data ?? const <Property>[],
+            );
+
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                    child: _buildHeader(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                    child: _buildHeroBanner(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                    child: _buildSearchField(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                    child: _buildModeSelector(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    child: _buildSectionHeader(visibleProperties.length),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 42,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: governorates.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final governorate = governorates[index];
+                        final isSelected = governorate == selectedGovernorate;
+
+                        return ChoiceChip(
+                          label: Text(governorate),
+                          selected: isSelected,
+                          showCheckmark: false,
+                          selectedColor: const Color(0xFF174C3C),
+                          backgroundColor: Colors.white,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          side: BorderSide(
+                            color: isSelected
+                                ? const Color(0xFF174C3C)
+                                : const Color(0xFFE7E4DC),
+                          ),
+                          onSelected: (_) {
+                            setState(() {
+                              selectedGovernorate = governorate;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                if (visibleProperties.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _EmptyState(),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 90),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final property = visibleProperties[index];
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: _buildPropertyCard(property),
+                        );
+                      }, childCount: visibleProperties.length),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
+    final isSignedIn = FirebaseAuth.instance.currentUser != null;
+
     return Row(
       children: [
         Container(
@@ -303,6 +405,17 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
             ],
+          ),
+        ),
+        IconButton(
+          tooltip: isSignedIn ? 'حسابي' : 'تسجيل الدخول',
+          onPressed: openAccount,
+          icon: Icon(
+            isSignedIn
+                ? Icons.account_circle_rounded
+                : Icons.account_circle_outlined,
+            color: const Color(0xFF174C3C),
+            size: 27,
           ),
         ),
         IconButton(
@@ -683,6 +796,11 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'تاريخ النشر: ${property.publishedDate}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                   const SizedBox(height: 14),
                   Row(
