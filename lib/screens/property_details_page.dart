@@ -14,6 +14,7 @@ class PropertyDetailsPage extends StatefulWidget {
 
 class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   bool isFavorite = false;
+  int currentPhotoIndex = 0;
 
   String formatPrice(int price) {
     final digits = price.toString().split('').reversed.toList();
@@ -25,6 +26,67 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     }
 
     return groups.reversed.join(',');
+  }
+
+  Widget _buildPhoto(String imageUrl) {
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: const Color(0xFFE5E1D8),
+          child: const Icon(
+            Icons.home_work_outlined,
+            size: 80,
+            color: Color(0xFF174C3C),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGallery(List<String> photos) {
+    if (photos.length <= 1) {
+      return _buildPhoto(photos.isNotEmpty ? photos.first : '');
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          itemCount: photos.length,
+          onPageChanged: (index) {
+            setState(() {
+              currentPhotoIndex = index;
+            });
+          },
+          itemBuilder: (context, index) => _buildPhoto(photos[index]),
+        ),
+        Positioned(
+          bottom: 14,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(photos.length, (index) {
+              final isActive = index == currentPhotoIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: isActive ? 18 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -42,20 +104,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
             backgroundColor: const Color(0xFF174C3C),
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
-              background: Image.network(
-                property.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: const Color(0xFFE5E1D8),
-                    child: const Icon(
-                      Icons.home_work_outlined,
-                      size: 80,
-                      color: Color(0xFF174C3C),
-                    ),
-                  );
-                },
-              ),
+              background: _buildGallery(property.photos),
             ),
             actions: [
               IconButton(
@@ -104,6 +153,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'تاريخ النشر: ${property.publishedDate}',
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
                   ),
                   const SizedBox(height: 20),
                   Container(
@@ -168,6 +222,25 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       ),
                     ],
                   ),
+                  if (property.description.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const Text(
+                      'الوصف',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF20302A),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      property.description,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        height: 1.7,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   const Text(
                     'آخر تأكيد للتوفر',
@@ -179,7 +252,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    property.lastConfirmed,
+                    property.lastConfirmed.isEmpty
+                        ? 'غير محدد'
+                        : property.lastConfirmed,
                     style: const TextStyle(color: Colors.black54),
                   ),
                   const SizedBox(height: 100),
