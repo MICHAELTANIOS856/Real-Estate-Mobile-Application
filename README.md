@@ -17,14 +17,14 @@ A Flutter mobile application for discovering and listing rental and sale propert
 ## Technology
 
 - **Flutter** and **Dart** for the mobile application
-- **Firebase** for authentication (Firebase Auth), database (Cloud Firestore), and image storage (Firebase Storage)
+- **Firebase** for authentication (Firebase Auth), database (Cloud Firestore), and compressed demo photos (Firestore byte fields)
 
-The original proposal named Supabase; this branch uses Firebase. See [Firebase setup and renewal](FIREBASE_SETUP_AND_RENEWAL.md) before deployment. Enable Email/Password in Firebase Authentication and review the included Firestore/Storage rules in an emulator before deploying to the intended project. Firebase Storage currently requires Blaze; no billing change is authorized or made by this branch. These rules do not enable the sign-in provider. No live configuration has been deployed by this change.
+The original proposal named Supabase; this branch uses Firebase. See [Firebase setup and renewal](FIREBASE_SETUP_AND_RENEWAL.md) before deployment. Enable Email/Password in Firebase Authentication and review the included Firestore/Storage rules in an emulator before deploying to the intended project. New photos use Firestore on Spark: up to four compressed JPEGs, each at most 120 KiB. Cloud Storage is not used for new uploads. No billing change is authorized or made. These rules do not enable the sign-in provider. No live configuration has been deployed by this change.
 
 ## Implemented in this branch
 
 - Arabic email/password registration, sign-in, and sign-out.
-- Signed-in owners can publish property details and multiple gallery photos.
+- Signed-in owners can publish property details and up to four compressed gallery photos.
 - The home screen reads available listings from Firestore. Empty and failed reads do not silently show fake listings.
 - Property details show the uploaded gallery, description, and original publication date.
 - My Properties is scoped to the owner UID, with one-tap renewal.
