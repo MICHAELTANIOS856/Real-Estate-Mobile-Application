@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/property.dart';
 import '../services/properties_service.dart';
+import '../services/property_photos.dart';
 
 /// Owner form for publishing a new property listing.
 class AddPropertyPage extends StatefulWidget {
@@ -65,7 +66,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
-  final Map<String, String> _uploadedUrls = {};
+  final Map<String, Uint8List> _compressedPhotos = {};
 
   ListingMode selectedMode = ListingMode.rent;
   String selectedType = AddPropertyPage.propertyTypes.first;
@@ -89,12 +90,13 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     try {
       final picked = await _picker.pickMultiImage(
         maxWidth: 1600,
+        maxHeight: 1600,
         imageQuality: 70,
       );
       if (!mounted || picked.isEmpty) return;
-      if (_images.length + picked.length > 10) {
+      if (_images.length + picked.length > PropertyPhotos.maxCount) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('الحد الأقصى 10 صور للعقار')),
+          const SnackBar(content: Text('الحد الأقصى 4 صور مصغّرة للعقار')),
         );
         return;
       }
@@ -122,6 +124,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
 
   void removeImage(int index) {
     setState(() {
+      _compressedPhotos.remove(_images[index].path);
       _images.removeAt(index);
     });
   }
@@ -158,22 +161,19 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     });
 
     try {
-      final imageUrls = <String>[];
+      final photos = <Uint8List>[];
       for (var i = 0; i < _images.length; i++) {
         if (mounted) {
           setState(() {
-            uploadProgress = 'جاري رفع الصور... ${i + 1}/${_images.length}';
+            uploadProgress = 'جاري تصغير الصور... ${i + 1}/${_images.length}';
           });
         }
-        final url =
-            _uploadedUrls[_images[i].path] ??
-            await PropertiesService.uploadPropertyImage(
-              ownerId: owner.uid,
-              image: _images[i],
-              index: i,
-            );
-        _uploadedUrls[_images[i].path] = url;
-        imageUrls.add(url);
+        final file = _images[i];
+        final photo =
+            _compressedPhotos[file.path] ??
+            await PropertyPhotos.compress(await file.readAsBytes());
+        _compressedPhotos[file.path] = photo;
+        photos.add(photo);
       }
 
       if (mounted) {
@@ -193,7 +193,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         bathrooms: int.parse(_bathroomsController.text.trim()),
         area: _parsePositiveInt(_areaController.text)!,
         description: _descriptionController.text.trim(),
-        imageUrls: imageUrls,
+        photos: photos,
         ownerId: owner.uid,
       );
 
@@ -208,6 +208,10 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
           : 'تعذر نشر العقار. تأكد من اتصال الإنترنت وحاول مرة أخرى';
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,6 +247,11 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 _buildSectionTitle('صور العقار'),
                 const SizedBox(height: 12),
                 _buildImagePicker(),
+                const SizedBox(height: 8),
+                const Text(
+                  'حتى 4 صور مصغّرة، 120 كيلوبايت للصورة بعد الضغط. تُحفظ في Firestore للديمو.',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
                 const SizedBox(height: 24),
                 _buildSectionTitle('نوع الإعلان'),
                 const SizedBox(height: 12),
@@ -252,6 +261,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _titleController,
+                  maxLength: 150,
                   textInputAction: TextInputAction.next,
                   decoration: _inputDecoration(
                     label: 'عنوان الإعلان',
