@@ -48,8 +48,9 @@ class Property {
     if (isExpired) return 'انتهت صلاحية الإعلان. جدّد التأكيد لإظهاره من جديد';
     if (lastConfirmedAt == null) return 'أكد توفر عقارك لتحديث صلاحية الإعلان';
     final days = DateTime.now().difference(lastConfirmedAt!).inDays;
-    if (days >= 6)
-      return 'تنبيه أخير: يتبقى أقل من يوم على انتهاء صلاحية الإعلان';
+    if (days >= 6) {
+      return 'تنبيه أخير: يتبقى يوم أو أقل على انتهاء صلاحية الإعلان';
+    }
     if (days >= 3) return 'مرّت 3 أيام. هل العقار ما زال متاحًا؟ جدّد التأكيد';
     return null;
   }
