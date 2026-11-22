@@ -1,3 +1,5 @@
+import '../widgets/property_image.dart';
+
 import 'package:flutter/material.dart';
 
 import '../models/property.dart';
@@ -29,7 +31,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   }
 
   Widget _buildPhoto(String imageUrl) {
-    return Image.network(
+    return PropertyImage(
       imageUrl,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
