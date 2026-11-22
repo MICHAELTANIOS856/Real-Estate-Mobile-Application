@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function validProperty(d) {
+      return d.keys().hasOnly(['title', 'type', 'governorate', 'location', 'mode', 'price', 'bedrooms', 'bathrooms', 'area', 'description', 'imageUrls', 'ownerId', 'status', 'createdAt', 'lastConfirmed'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 150
+        && d.type is string && d.governorate is string && d.location is string
+        && d.location.size() > 0 && d.location.size() <= 200
+        && d.mode in ['rent', 'sale'] && d.status == 'available'
+        && d.price is int && d.price > 0
+        && d.area is int && d.area > 0
+        && d.bedrooms is int && d.bedrooms >= 0 && d.bedrooms <= 100
+        && d.bathrooms is int && d.bathrooms >= 0 && d.bathrooms <= 100
+        && d.description is string && d.description.size() <= 5000
+        && d.imageUrls is list && d.imageUrls.size() > 0 && d.imageUrls.size() <= 10
+        && d.createdAt == request.time && d.lastConfirmed == request.time;
+    }
+    match /properties/{propertyId} {
+      allow read: if resource.data.status == 'available'
+        || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && validProperty(request.resource.data);
+      // Editing is intentionally not exposed in this feature pass.
+      allow update, delete: if false;
+    }
+    match /viewing_requests/{requestId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['customerName', 'customerPhone', 'propertyId', 'propertyTitle', 'location', 'governorate', 'requestedDate', 'requestedTime', 'status', 'userId', 'ownerId', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() > 0
+        && request.resource.data.customerName.size() <= 100
+        && request.resource.data.customerPhone is string
+        && request.resource.data.customerPhone.matches('^01[0125][0-9]{8}$')
+        && request.resource.data.requestedDate is timestamp
+        && request.resource.data.requestedTime is string
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.status == 'available'
+        && request.resource.data.ownerId == get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.ownerId;
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.ownerId);
+      allow update, delete: if false;
+    }
+  }
+}
