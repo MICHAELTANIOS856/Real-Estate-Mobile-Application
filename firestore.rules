@@ -2,10 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function validPhoto(p) { return p is bytes && p.size() > 0 && p.size() <= 122880; }
+    function validPhotos(p) {
+      return p is list && p.size() >= 1 && p.size() <= 4
+        && validPhoto(p[0])
+        && (p.size() < 2 || validPhoto(p[1]))
+        && (p.size() < 3 || validPhoto(p[2]))
+        && (p.size() < 4 || validPhoto(p[3]));
+    }
     function validProperty(d) {
-      return d.keys().hasOnly(['title', 'type', 'governorate', 'location', 'mode', 'price', 'bedrooms', 'bathrooms', 'area', 'description', 'imageUrls', 'ownerId', 'status', 'createdAt', 'lastConfirmedAt'])
+      return d.keys().hasOnly(['title', 'type', 'governorate', 'location', 'mode', 'price', 'bedrooms', 'bathrooms', 'area', 'description', 'photoBytes', 'ownerId', 'status', 'createdAt', 'lastConfirmedAt'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 150
-        && d.type is string && d.governorate is string && d.location is string
+        && d.type is string && d.type.size() <= 50
+        && d.governorate is string && d.governorate.size() <= 100
+        && d.location is string
         && d.location.size() > 0 && d.location.size() <= 200
         && d.mode in ['rent', 'sale'] && d.status == 'available'
         && d.price is int && d.price > 0
@@ -13,7 +23,7 @@ service cloud.firestore {
         && d.bedrooms is int && d.bedrooms >= 0 && d.bedrooms <= 100
         && d.bathrooms is int && d.bathrooms >= 0 && d.bathrooms <= 100
         && d.description is string && d.description.size() <= 5000
-        && d.imageUrls is list && d.imageUrls.size() > 0 && d.imageUrls.size() <= 10
+        && validPhotos(d.photoBytes)
         && d.createdAt == request.time && d.lastConfirmedAt == request.time;
     }
     match /properties/{propertyId} {
