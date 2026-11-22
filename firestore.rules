@@ -44,6 +44,7 @@ service cloud.firestore {
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time
         && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.status == 'available'
+        && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.lastConfirmedAt + duration.value(7, 'd') > request.time
         && request.resource.data.ownerId == get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.ownerId;
       allow read: if signedIn()
         && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.ownerId);
