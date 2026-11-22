@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -20,34 +22,49 @@ class MyPropertiesPage extends StatelessWidget {
           appBar: AppBar(title: const Text('عقاراتي')),
           body: owner == null
               ? const Center(child: Text('سجّل الدخول لعرض عقاراتك'))
-              : _OwnerProperties(ownerId: owner.uid),
+              : OwnerPropertiesList(ownerId: owner.uid),
         );
       },
     );
   }
 }
 
-class _OwnerProperties extends StatefulWidget {
-  const _OwnerProperties({required this.ownerId});
+class OwnerPropertiesList extends StatefulWidget {
+  const OwnerPropertiesList({super.key, required this.ownerId, this.stream});
+  final Stream<List<Property>>? stream;
   final String ownerId;
   @override
-  State<_OwnerProperties> createState() => _OwnerPropertiesState();
+  State<OwnerPropertiesList> createState() => _OwnerPropertiesState();
 }
 
-class _OwnerPropertiesState extends State<_OwnerProperties> {
+class _OwnerPropertiesState extends State<OwnerPropertiesList> {
   late Stream<List<Property>> properties;
+  Timer? refresh;
   @override
   void initState() {
     super.initState();
-    properties = PropertiesService.watchOwnerProperties(widget.ownerId);
+    refresh = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+    properties =
+        widget.stream ?? PropertiesService.watchOwnerProperties(widget.ownerId);
   }
 
   @override
-  void didUpdateWidget(covariant _OwnerProperties oldWidget) {
+  void didUpdateWidget(covariant OwnerPropertiesList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.ownerId != widget.ownerId) {
-      properties = PropertiesService.watchOwnerProperties(widget.ownerId);
+    if (oldWidget.ownerId != widget.ownerId ||
+        oldWidget.stream != widget.stream) {
+      properties =
+          widget.stream ??
+          PropertiesService.watchOwnerProperties(widget.ownerId);
     }
+  }
+
+  @override
+  void dispose() {
+    refresh?.cancel();
+    super.dispose();
   }
 
   @override
@@ -61,7 +78,9 @@ class _OwnerPropertiesState extends State<_OwnerProperties> {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        final listings = snapshot.data!;
+        final listings = snapshot.data!
+            .where((property) => property.ownerId == widget.ownerId)
+            .toList();
         if (listings.isEmpty) {
           return const Center(child: Text('لم تضف أي عقارات بعد'));
         }
