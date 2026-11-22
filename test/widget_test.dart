@@ -1,30 +1,45 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:real_estate_app/main.dart';
+import 'package:real_estate_app/models/property.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const RealEstateApp());
+  test('photos fall back to the cover image when no gallery is set', () {
+    const property = Property(
+      id: '1',
+      title: 'شقة تجريبية',
+      type: 'شقة',
+      location: 'التجمع الخامس',
+      governorate: 'القاهرة',
+      mode: ListingMode.rent,
+      price: 12000,
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 160,
+      imageUrl: 'https://example.com/cover.jpg',
+      lastConfirmed: 'اليوم',
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(property.photos, ['https://example.com/cover.jpg']);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('photos return the gallery when it is set', () {
+    const property = Property(
+      id: '2',
+      title: 'فيلا تجريبية',
+      type: 'فيلا',
+      location: 'الشيخ زايد',
+      governorate: 'الجيزة',
+      mode: ListingMode.sale,
+      price: 5000000,
+      bedrooms: 4,
+      bathrooms: 3,
+      area: 300,
+      imageUrl: 'https://example.com/cover.jpg',
+      imageUrls: ['https://example.com/1.jpg', 'https://example.com/2.jpg'],
+      lastConfirmed: 'اليوم',
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(property.photos.length, 2);
+    expect(property.photos.first, 'https://example.com/1.jpg');
   });
 }
