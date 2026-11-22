@@ -1,14 +1,16 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_picker/image_picker.dart';
+
+import 'dart:typed_data';
+
+import 'property_photos.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/property.dart';
 
-/// Firestore/Storage access for property listings.
+/// Firestore access for property listings.
 class PropertiesService {
   PropertiesService._();
 
@@ -70,30 +72,6 @@ class PropertiesService {
         });
   }
 
-  /// Uploads one listing photo and returns its download URL.
-  static Future<String> uploadPropertyImage({
-    required String ownerId,
-    required XFile image,
-    required int index,
-  }) async {
-    final extension = image.name.split('.').last.toLowerCase();
-    final contentType = switch (extension) {
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      'heic' => 'image/heic',
-      _ => 'image/jpeg',
-    };
-    final ref = FirebaseStorage.instance.ref().child(
-      'property_images/$ownerId/${DateTime.now().millisecondsSinceEpoch}_$index.$extension',
-    );
-
-    await ref.putData(
-      await image.readAsBytes(),
-      SettableMetadata(contentType: contentType),
-    );
-    return ref.getDownloadURL();
-  }
-
   /// Saves a new property listing for the signed-in owner.
   static Future<String> addProperty({
     required String title,
@@ -106,9 +84,13 @@ class PropertiesService {
     required int bathrooms,
     required int area,
     required String description,
-    required List<String> imageUrls,
+    required List<Uint8List> photos,
     required String ownerId,
   }) async {
+    if (FirebaseAuth.instance.currentUser?.uid != ownerId) {
+      throw StateError('Not the signed-in owner');
+    }
+    PropertyPhotos.validate(photos);
     final doc = await _firestore.collection('properties').add({
       'title': title,
       'type': type,
@@ -120,7 +102,7 @@ class PropertiesService {
       'bathrooms': bathrooms,
       'area': area,
       'description': description,
-      'imageUrls': imageUrls,
+      'photoBytes': photos.map((bytes) => Blob(bytes)).toList(),
       'ownerId': ownerId,
       'status': 'available',
       'createdAt': FieldValue.serverTimestamp(),
