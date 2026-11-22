@@ -17,7 +17,19 @@ A Flutter mobile application for discovering and listing rental and sale propert
 ## Technology
 
 - **Flutter** and **Dart** for the mobile application
-- **Supabase** for authentication, database, and image storage
+- **Firebase** for authentication (Firebase Auth), database (Cloud Firestore), and image storage (Firebase Storage)
+
+The original proposal named Supabase; this branch uses Firebase. Enable Email/Password in Firebase Authentication, provision Firebase Storage, and review and deploy the included Firestore/Storage rules to the intended project. These rules do not enable the sign-in provider. No live configuration has been deployed by this change.
+
+## Implemented in this branch
+
+- Arabic email/password registration, sign-in, and sign-out.
+- Signed-in owners can publish property details and multiple gallery photos.
+- The home screen reads available listings from Firestore. Empty and failed reads do not silently show fake listings.
+- Property details show the uploaded gallery and description.
+
+Run `flutter pub get`, `flutter analyze`, and `flutter test` before `flutter run`. The original proposal describes future features beyond these pages. Favorites remain local to the running app; owner editing, moderation, phone OTP, and notifications are not included in this pass.
+
 
 ## Project Status
 
