@@ -1,0 +1,10 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "properties",
+      "fieldPath": "photoBytes",
+      "indexes": []
+    }
+  ]
+}
