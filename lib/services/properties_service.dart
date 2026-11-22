@@ -46,8 +46,9 @@ class PropertiesService {
 
   static Future<void> renewProperty(Property property) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null || uid != property.ownerId)
+    if (uid == null || uid != property.ownerId) {
       throw StateError('Not the owner');
+    }
     await _firestore.collection('properties').doc(property.id).update({
       'lastConfirmedAt': FieldValue.serverTimestamp(),
     });
