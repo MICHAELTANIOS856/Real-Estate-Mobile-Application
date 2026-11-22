@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ListingMode { rent, sale }
@@ -65,16 +67,30 @@ class Property {
   List<String> get photos => imageUrls.isNotEmpty ? imageUrls : [imageUrl];
 
   factory Property.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? <String, dynamic>{};
+    return Property.fromData(doc.id, doc.data() ?? <String, dynamic>{});
+  }
 
-    final photos =
+  factory Property.fromData(String id, Map<String, dynamic> data) {
+    final legacyPhotos =
         (data['imageUrls'] as List<dynamic>?)?.whereType<String>().toList() ??
         const <String>[];
+
+    final bytes =
+        (data['photoBytes'] as List<dynamic>?)?.whereType<Blob>().toList() ??
+        <Blob>[];
+    final photos = bytes.isNotEmpty
+        ? bytes
+              .map(
+                (photo) =>
+                    'data:image/jpeg;base64,${base64Encode(photo.bytes)}',
+              )
+              .toList()
+        : legacyPhotos;
 
     final createdAtTimestamp = data['createdAt'] as Timestamp?;
 
     return Property(
-      id: doc.id,
+      id: id,
       title: data['title'] as String? ?? '',
       type: data['type'] as String? ?? '',
       location: data['location'] as String? ?? '',
