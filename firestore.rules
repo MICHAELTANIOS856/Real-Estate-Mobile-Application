@@ -2,6 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function hasRole(role) {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['name', 'phone', 'role', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'phone', 'role', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^01[0125][0-9]{8}$')
+        && request.resource.data.role in ['owner', 'consumer']
+        && request.resource.data.createdAt == request.time;
+      // Account type is chosen once; clients cannot switch privileges later.
+      allow update, delete: if false;
+    }
     function validPhoto(p) { return p is bytes && p.size() > 0 && p.size() <= 122880; }
     function validPhotos(p) {
       return p is list && p.size() >= 1 && p.size() <= 4
@@ -29,11 +46,11 @@ service cloud.firestore {
     match /properties/{propertyId} {
       allow read: if resource.data.status == 'available'
         || (signedIn() && resource.data.ownerId == request.auth.uid);
-      allow create: if signedIn()
+      allow create: if hasRole('owner')
         && request.resource.data.ownerId == request.auth.uid
         && validProperty(request.resource.data);
       // Only the original owner can renew. No other fields can change here.
-      allow update: if signedIn()
+      allow update: if hasRole('owner')
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastConfirmedAt'])
@@ -41,7 +58,7 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /viewing_requests/{requestId} {
-      allow create: if signedIn()
+      allow create: if hasRole('consumer')
         && request.resource.data.keys().hasOnly(['customerName', 'customerPhone', 'propertyId', 'propertyTitle', 'location', 'governorate', 'requestedDate', 'requestedTime', 'status', 'userId', 'ownerId', 'createdAt'])
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.customerName is string
