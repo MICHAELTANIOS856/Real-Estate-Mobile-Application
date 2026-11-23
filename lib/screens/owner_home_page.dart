@@ -19,16 +19,7 @@ class OwnerHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('عقاراتي'),
-          Text(
-            'حساب مالك • عقاراتك المرفوعة فقط',
-            style: TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
+      title: const Text('عقاراتي'),
       actions: [
         IconButton(
           tooltip: 'تسجيل الخروج',
