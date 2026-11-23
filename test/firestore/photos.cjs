@@ -1,5 +1,5 @@
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, getDoc, serverTimestamp, Bytes, updateDoc } = require('firebase/firestore');
+const { doc, setDoc, getDoc, serverTimestamp, Bytes, updateDoc, deleteDoc } = require('firebase/firestore');
 const fs = require('fs');
 (async () => {
  const env = await initializeTestEnvironment({projectId: 'demo-real-estate', firestore: {host:'127.0.0.1', port:8787, rules:fs.readFileSync(require('path').join(__dirname,'../../firestore.rules'),'utf8')}});
@@ -31,7 +31,8 @@ const fs = require('fs');
   await assertFails(setDoc(doc(owner,'properties/string'),listing(['not bytes'])));
   await assertFails(setDoc(doc(other,'properties/wrong-owner'),listing([photo(1)])));
   await assertFails(setDoc(doc(guest,'properties/guest'),listing([photo(1)])));
-  await assertSucceeds(getDoc(doc(guest,'properties/valid')));
+  await assertFails(getDoc(doc(guest,'properties/valid')));
+  await assertSucceeds(getDoc(doc(consumer,'properties/valid')));
   await assertSucceeds(updateDoc(doc(owner,'properties/valid'),{lastConfirmedAt:serverTimestamp()}));
   await assertFails(updateDoc(doc(other,'properties/valid'),{lastConfirmedAt:serverTimestamp()}));
   await assertFails(updateDoc(doc(owner,'properties/valid'),{photoBytes:[photo(2)]}));
@@ -40,6 +41,12 @@ const fs = require('fs');
   await assertFails(setDoc(doc(owner,'viewing_requests/owner'),viewing('owner')));
   await assertFails(setDoc(doc(untyped,'viewing_requests/untyped'),viewing('untyped')));
   await assertFails(updateDoc(doc(consumer,'properties/valid'),{lastConfirmedAt:serverTimestamp()}));
-  console.log('27 Firestore rules assertions passed');
+  await assertSucceeds(setDoc(doc(owner,'properties/demo'),{...listing([photo(1)]),isDemo:true}));
+  await assertFails(deleteDoc(doc(other,'properties/demo')));
+  await assertFails(deleteDoc(doc(consumer,'properties/demo')));
+  await assertFails(deleteDoc(doc(owner,'properties/valid')));
+  await assertFails(updateDoc(doc(owner,'properties/valid'),{isDemo:true}));
+  await assertSucceeds(deleteDoc(doc(owner,'properties/demo')));
+  console.log('34 Firestore rules assertions passed');
  } finally { await env.cleanup(); }
 })().catch(e => {console.error(e);process.exit(1)});
