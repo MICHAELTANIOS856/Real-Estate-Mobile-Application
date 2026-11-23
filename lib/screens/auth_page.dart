@@ -1,6 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../models/account_role.dart';
+import '../services/account_service.dart';
+import '../widgets/role_picker.dart';
+
 /// Email/password sign-in and registration.
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -12,6 +16,9 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _confirmController = TextEditingController();
+  AccountRole? selectedRole;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -22,6 +29,8 @@ class _AuthPageState extends State<AuthPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
+    _confirmController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -47,7 +56,20 @@ class _AuthPageState extends State<AuthPage> {
               email: _emailController.text.trim(),
               password: _passwordController.text,
             );
-        await credential.user?.updateDisplayName(_nameController.text.trim());
+        try {
+          await AccountService.createProfile(
+            name: _nameController.text,
+            phone: _phoneController.text,
+            role: selectedRole!,
+          );
+        } catch (_) {
+          // Auth and Firestore are separate services. Keep the signed-in user;
+          // the start screen resumes profile setup instead of creating twice.
+          if (!mounted) return;
+          Navigator.pop(context, true);
+          return;
+        }
+        if (credential.user == null) throw StateError('Missing user');
       }
 
       if (!mounted) return;
@@ -103,162 +125,202 @@ class _AuthPageState extends State<AuthPage> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
-            children: [
-              Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF174C3C),
-                  borderRadius: BorderRadius.circular(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF174C3C),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Icon(
+                      Icons.home_work_rounded,
+                      color: Colors.white,
+                      size: 38,
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.home_work_rounded,
-                  color: Colors.white,
-                  size: 38,
+                const SizedBox(height: 18),
+                Text(
+                  isLoginMode ? 'أهلًا بعودتك' : 'انضم إلى عقارك',
+                  style: const TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF20302A),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                isLoginMode ? 'أهلًا بعودتك' : 'انضم إلى عقارك',
-                style: const TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF20302A),
+                const SizedBox(height: 6),
+                Text(
+                  isLoginMode
+                      ? 'سجّل الدخول إلى حسابك'
+                      : 'اختر نوع حسابك وأكمل بياناتك',
+                  style: const TextStyle(color: Colors.black54),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                isLoginMode
-                    ? 'سجّل الدخول لنشر عقارك وطلب المعاينة'
-                    : 'أنشئ حسابك لنشر عقاراتك',
-                style: const TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 26),
-              if (!isLoginMode) ...[
+                const SizedBox(height: 26),
+                if (!isLoginMode) ...[
+                  RolePicker(
+                    value: selectedRole,
+                    onChanged: (role) => setState(() => selectedRole = role),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _nameController,
+                    textInputAction: TextInputAction.next,
+                    decoration: _inputDecoration(
+                      label: 'الاسم',
+                      icon: Icons.person_outline,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'اكتب اسمك';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 TextFormField(
-                  controller: _nameController,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
+                  textDirection: TextDirection.ltr,
                   decoration: _inputDecoration(
-                    label: 'الاسم',
-                    icon: Icons.person_outline,
+                    label: 'البريد الإلكتروني',
+                    icon: Icons.mail_outline,
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'اكتب اسمك';
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty) {
+                      return 'اكتب بريدك الإلكتروني';
+                    }
+                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                        .hasMatch(email)) {
+                      return 'اكتب بريدًا إلكترونيًا صحيحًا';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 14),
-              ],
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                textDirection: TextDirection.ltr,
-                decoration: _inputDecoration(
-                  label: 'البريد الإلكتروني',
-                  icon: Icons.mail_outline,
-                ),
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isEmpty) {
-                    return 'اكتب بريدك الإلكتروني';
-                  }
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                    return 'اكتب بريدًا إلكترونيًا صحيحًا';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: obscurePassword,
-                textDirection: TextDirection.ltr,
-                decoration:
-                    _inputDecoration(
-                      label: 'كلمة المرور',
-                      icon: Icons.lock_outline,
-                    ).copyWith(
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            obscurePassword = !obscurePassword;
-                          });
-                        },
-                        icon: Icon(
-                          obscurePassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: Colors.black45,
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: obscurePassword,
+                  textDirection: TextDirection.ltr,
+                  decoration:
+                      _inputDecoration(
+                        label: 'كلمة المرور',
+                        icon: Icons.lock_outline,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: Colors.black45,
+                          ),
                         ),
                       ),
+                  validator: (value) {
+                    final password = value ?? '';
+                    if (password.isEmpty) {
+                      return 'اكتب كلمة المرور';
+                    }
+                    if (!isLoginMode && password.length < 6) {
+                      return 'كلمة المرور يجب ألا تقل عن 6 أحرف';
+                    }
+                    return null;
+                  },
+                ),
+                if (!isLoginMode) ...[
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirmController,
+                    obscureText: obscurePassword,
+                    textDirection: TextDirection.ltr,
+                    decoration: _inputDecoration(
+                      label: 'تأكيد كلمة المرور',
+                      icon: Icons.lock_outline,
                     ),
-                validator: (value) {
-                  final password = value ?? '';
-                  if (password.isEmpty) {
-                    return 'اكتب كلمة المرور';
-                  }
-                  if (!isLoginMode && password.length < 6) {
-                    return 'كلمة المرور يجب ألا تقل عن 6 أحرف';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 26),
-              SizedBox(
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: isSubmitting ? null : submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF174C3C),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: const Color(0xFF268064),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                    validator: (value) =>
+                        value == _passwordController.text &&
+                            (value?.isNotEmpty ?? false)
+                        ? null
+                        : 'كلمتا المرور غير متطابقتين',
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    textDirection: TextDirection.ltr,
+                    decoration: _inputDecoration(
+                      label: 'رقم الموبايل',
+                      icon: Icons.phone_outlined,
+                    ),
+                    validator: validatePhone,
+                  ),
+                ],
+                const SizedBox(height: 26),
+                SizedBox(
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: isSubmitting ? null : submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF174C3C),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFF268064),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 23,
+                            height: 23,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            isLoginMode ? 'تسجيل الدخول' : 'إنشاء الحساب',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () {
+                          setState(() {
+                            isLoginMode = !isLoginMode;
+                          });
+                        },
+                  child: Text(
+                    isLoginMode
+                        ? 'ليس لديك حساب؟ أنشئ حسابًا جديدًا'
+                        : 'لديك حساب بالفعل؟ سجّل الدخول',
+                    style: const TextStyle(
+                      color: Color(0xFF268064),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 23,
-                          height: 23,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          isLoginMode ? 'تسجيل الدخول' : 'إنشاء الحساب',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () {
-                        setState(() {
-                          isLoginMode = !isLoginMode;
-                        });
-                      },
-                child: Text(
-                  isLoginMode
-                      ? 'ليس لديك حساب؟ أنشئ حسابًا جديدًا'
-                      : 'لديك حساب بالفعل؟ سجّل الدخول',
-                  style: const TextStyle(
-                    color: Color(0xFF268064),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
