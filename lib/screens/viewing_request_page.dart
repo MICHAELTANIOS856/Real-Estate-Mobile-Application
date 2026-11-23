@@ -1,3 +1,6 @@
+import '../models/account_role.dart';
+import '../services/account_service.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -102,6 +105,8 @@ class _ViewingRequestPageState extends State<ViewingRequestPage> {
     final property = widget.property;
 
     try {
+      await AccountService.requireRole(AccountRole.consumer);
+      if (!mounted) return;
       await FirebaseFirestore.instance.collection('viewing_requests').add({
         'customerName': _nameController.text.trim(),
         'customerPhone': _phoneController.text.trim(),
