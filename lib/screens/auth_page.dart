@@ -7,7 +7,9 @@ import '../widgets/role_picker.dart';
 
 /// Email/password sign-in and registration.
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key});
+  const AuthPage({super.key, this.closeOnSuccess = true});
+
+  final bool closeOnSuccess;
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -25,6 +27,7 @@ class _AuthPageState extends State<AuthPage> {
   bool isLoginMode = true;
   bool isSubmitting = false;
   bool obscurePassword = true;
+  bool isResettingPassword = false;
 
   @override
   void dispose() {
@@ -37,7 +40,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> submit() async {
-    if (isSubmitting) return;
+    if (isSubmitting || isResettingPassword) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -66,14 +69,14 @@ class _AuthPageState extends State<AuthPage> {
           // Auth and Firestore are separate services. Keep the signed-in user;
           // the start screen resumes profile setup instead of creating twice.
           if (!mounted) return;
-          Navigator.pop(context, true);
+          if (widget.closeOnSuccess) Navigator.pop(context, true);
           return;
         }
         if (credential.user == null) throw StateError('Missing user');
       }
 
       if (!mounted) return;
-      Navigator.pop(context, true);
+      if (widget.closeOnSuccess) Navigator.pop(context, true);
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -89,6 +92,48 @@ class _AuthPageState extends State<AuthPage> {
           isSubmitting = false;
         });
       }
+    }
+  }
+
+  Future<void> resetPassword() async {
+    if (isSubmitting || isResettingPassword) return;
+    final email = _emailController.text.trim();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('اكتب بريدًا إلكترونيًا صحيحًا في خانة البريد أولًا'),
+        ),
+      );
+      return;
+    }
+    setState(() => isResettingPassword = true);
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'لو البريد مسجل، هيوصلك رابط لإعادة تعيين كلمة المرور. راجع البريد والرسائل غير المرغوب فيها',
+          ),
+        ),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      // Avoid disclosing which emails have an account (enumeration protection).
+      final message = error.code == 'user-not-found'
+          ? 'لو البريد مسجل، هيوصلك رابط لإعادة تعيين كلمة المرور. راجع البريد والرسائل غير المرغوب فيها'
+          : _messageForCode(error.code);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر إرسال رابط إعادة التعيين، حاول مرة أخرى'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => isResettingPassword = false);
     }
   }
 
@@ -241,6 +286,20 @@ class _AuthPageState extends State<AuthPage> {
                     return null;
                   },
                 ),
+                if (isLoginMode)
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton(
+                      onPressed: isSubmitting || isResettingPassword
+                          ? null
+                          : resetPassword,
+                      child: Text(
+                        isResettingPassword
+                            ? 'جاري إرسال الرابط...'
+                            : 'نسيت كلمة المرور؟',
+                      ),
+                    ),
+                  ),
                 if (!isLoginMode) ...[
                   const SizedBox(height: 14),
                   TextFormField(
