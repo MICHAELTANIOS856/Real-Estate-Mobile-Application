@@ -41,6 +41,31 @@ class RealEstateApp extends StatelessWidget {
   }
 }
 
+List<Property> filterAvailableProperties(
+  List<Property> properties, {
+  required ListingMode selectedMode,
+  required String selectedGovernorate,
+  required String searchText,
+}) {
+  return properties.where((property) {
+    final matchesMode = property.mode == selectedMode;
+
+    final matchesGovernorate =
+        selectedGovernorate == 'الكل' ||
+        property.governorate == selectedGovernorate;
+
+    final normalizedSearch = searchText.trim().toLowerCase();
+    final matchesSearch =
+        normalizedSearch.isEmpty ||
+        property.title.toLowerCase().contains(normalizedSearch) ||
+        property.location.toLowerCase().contains(normalizedSearch) ||
+        property.governorate.toLowerCase().contains(normalizedSearch) ||
+        property.type.toLowerCase().contains(normalizedSearch);
+
+    return matchesMode && matchesGovernorate && matchesSearch;
+  }).toList();
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -62,25 +87,13 @@ class _HomePageState extends State<HomePage> {
     ...AddPropertyPage.governorates,
   ];
 
-  List<Property> filterProperties(List<Property> properties) {
-    return properties.where((property) {
-      final matchesMode = property.mode == selectedMode;
-
-      final matchesGovernorate =
-          selectedGovernorate == 'الكل' ||
-          property.governorate == selectedGovernorate;
-
-      final normalizedSearch = searchText.trim().toLowerCase();
-      final matchesSearch =
-          normalizedSearch.isEmpty ||
-          property.title.toLowerCase().contains(normalizedSearch) ||
-          property.location.toLowerCase().contains(normalizedSearch) ||
-          property.governorate.toLowerCase().contains(normalizedSearch) ||
-          property.type.toLowerCase().contains(normalizedSearch);
-
-      return matchesMode && matchesGovernorate && matchesSearch;
-    }).toList();
-  }
+  List<Property> filterProperties(List<Property> properties) =>
+      filterAvailableProperties(
+        properties,
+        selectedMode: selectedMode,
+        selectedGovernorate: selectedGovernorate,
+        searchText: searchText,
+      );
 
   String formatPrice(int price) {
     final digits = price.toString().split('').reversed.toList();
@@ -295,9 +308,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 if (visibleProperties.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _EmptyState(),
+                  const SliverToBoxAdapter(
+                    child: AvailablePropertiesEmptyState(),
                   )
                 else
                   SliverPadding(
@@ -816,48 +828,48 @@ class _PropertyFeature extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+/// Shared empty result for unmatched text, governorate or rent/sale filters.
+class AvailablePropertiesEmptyState extends StatelessWidget {
+  const AvailablePropertiesEmptyState({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 82,
-              height: 82,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE5EEE9),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.search_off_rounded,
-                size: 40,
-                color: Color(0xFF174C3C),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'لا توجد عقارات مطابقة',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF20302A),
-              ),
-            ),
-            const SizedBox(height: 7),
-            const Text(
-              'جرّب تغيير نوع البحث أو المنطقة',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54),
-            ),
-          ],
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(20, 22, 20, 32),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: const Color(0xFF174C3C), width: 1.5),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(
+          Icons.search_off_rounded,
+          size: 48,
+          color: Color(0xFF174C3C),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 16),
+        Semantics(
+          header: true,
+          liveRegion: true,
+          child: const Text(
+            'لا يوجد عقارات متاحة',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF174C3C),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'جرّب تغيير البحث أو المنطقة أو نوع العرض',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 15, color: Color(0xFF20302A)),
+        ),
+      ],
+    ),
+  );
 }
