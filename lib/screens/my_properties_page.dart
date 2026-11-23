@@ -1,33 +1,10 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/property.dart';
 import '../services/properties_service.dart';
 import 'property_details_page.dart';
-
-/// Owner-only list. Public discovery uses a separate available-listings query.
-class MyPropertiesPage extends StatelessWidget {
-  const MyPropertiesPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      initialData: FirebaseAuth.instance.currentUser,
-      builder: (context, auth) {
-        final owner = auth.data;
-        return Scaffold(
-          appBar: AppBar(title: const Text('عقاراتي')),
-          body: owner == null
-              ? const Center(child: Text('سجّل الدخول لعرض عقاراتك'))
-              : OwnerPropertiesList(ownerId: owner.uid),
-        );
-      },
-    );
-  }
-}
 
 class OwnerPropertiesList extends StatefulWidget {
   const OwnerPropertiesList({super.key, required this.ownerId, this.stream});
@@ -106,8 +83,10 @@ class _OwnerPropertiesState extends State<OwnerPropertiesList> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              PropertyDetailsPage(property: property),
+                          builder: (_) => PropertyDetailsPage(
+                            property: property,
+                            allowViewingRequest: false,
+                          ),
                         ),
                       ),
                     ),
