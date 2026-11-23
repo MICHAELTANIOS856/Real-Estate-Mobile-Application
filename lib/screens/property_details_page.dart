@@ -6,9 +6,14 @@ import '../models/property.dart';
 import 'viewing_request_page.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
-  const PropertyDetailsPage({super.key, required this.property});
+  const PropertyDetailsPage({
+    super.key,
+    required this.property,
+    this.allowViewingRequest = true,
+  });
 
   final Property property;
+  final bool allowViewingRequest;
 
   @override
   State<PropertyDetailsPage> createState() => _PropertyDetailsPageState();
@@ -266,34 +271,37 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-        child: SizedBox(
-          height: 54,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ViewingRequestPage(property: property),
+      bottomNavigationBar: !widget.allowViewingRequest
+          ? null
+          : SafeArea(
+              minimum: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              child: SizedBox(
+                height: 54,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ViewingRequestPage(property: property),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF174C3C),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: const Text(
+                    'طلب معاينة',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF174C3C),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
               ),
             ),
-            icon: const Icon(Icons.calendar_month_outlined),
-            label: const Text(
-              'طلب معاينة',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
