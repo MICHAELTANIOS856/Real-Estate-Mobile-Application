@@ -1,3 +1,62 @@
+## Account roles and the new start screen
+
+Sign-up now asks for owner or consumer (no default), name, email, password,
+password confirmation and an 11-digit Egyptian mobile number (010/011/012/015).
+Passwords are handled only by Firebase Auth, never stored in Firestore.
+`users/{uid}` stores only name, phone, role and createdAt. Profile reads are
+private to that UID. A client can create its own profile once but cannot later
+change its role, delete its profile or write someone else's profile.
+
+Owners start directly at My Properties with upload and renewal. They do not see
+the consumer search, governorate filters or rent/sale selector. The upload form
+still asks whether the property is for rent or sale. Consumers and signed-out
+guests retain browsing; consumers cannot upload or renew. Viewing requests require
+a consumer account. Owners can open their listing details without a viewing-request
+button. Role checks run in both the client service and Firestore rules.
+
+Existing Auth accounts with no profile must choose a type and enter their name
+and mobile once at next sign-in. No existing Auth user or listing is deleted or
+automatically assigned an owner role. If an old owner chooses consumer, their
+listings remain stored but are not shown as their start screen. Choose owner for
+an account that manages existing listings. Changing a saved role needs a reviewed
+admin migration, there is no client role-switch feature.
+
+Auth creation and Firestore profile creation cannot be one atomic transaction.
+If profile saving fails, the app keeps the new signed-in Auth account and opens
+Complete Profile so saving can be retried, without trying to register the same
+email again. A rules/connection error does not silently grant owner access.
+
+### Before testing this update
+
+1. Keep a copy of the CURRENT deployed Firestore rules. Check whether the project
+   contains shared or important data. First test in the emulator or an isolated
+   Firebase project; do not overwrite shared production rules blindly.
+2. Review and publish the updated `firestore.rules` (including `/users`) to the
+   intended test project. The previous rules do not allow profile creation.
+   No new indexes or paid services are needed for roles. Keep the existing
+   photoBytes index exemption from the setup below.
+3. Stop the running Flutter process, pull `feature/auth-and-owner-upload`, run
+   `flutter pub get`, then `flutter run`. Use a full restart, not only hot reload.
+   Preserve/stash local changes before pulling; do not use reset --hard.
+4. Register one owner and one consumer with separate emails. Check that password
+   and confirmation are shown, invalid phones/mismatched passwords are rejected,
+   and a type must be chosen. Sign out/in and restart to check that the role stays.
+5. Owner A uploads; owner B must not see A's listings in My Properties. Consumer
+   sees current listings, has no upload button and can request a viewing. Consumer
+   direct upload/renew attempts must be denied by rules. Old accounts see Complete
+   Profile rather than being assumed to be owners.
+
+Switching Git branches DOES NOT roll back deployed Firebase rules. Keep both
+versions and a deliberate deployment rollback plan. No live Firebase rules,
+accounts, data or billing settings were changed while preparing this update.
+
+Verification for this update: 19 automated Flutter tests and 27 actual Firestore
+emulator assertions pass. Phone-width sign-up and owner-start screens were rendered
+and visually checked using fixtures. These checks do not prove live-project Auth,
+profile creation, upload or viewing-request end-to-end behavior. No APK was built.
+
+---
+
 # Firebase setup and listing renewal
 
 ## Included on this feature branch
