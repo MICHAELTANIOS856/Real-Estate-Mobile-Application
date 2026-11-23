@@ -6,16 +6,18 @@ import '../models/account_role.dart';
 import '../services/account_service.dart';
 import '../widgets/role_picker.dart';
 import 'owner_home_page.dart';
+import 'auth_page.dart';
 
 /// Re-evaluates both sign-in and persisted role, including after app restart.
 class AccountGate extends StatelessWidget {
-  const AccountGate({super.key});
+  const AccountGate({super.key, this.authStream});
+  final Stream<User?>? authStream;
   @override
   Widget build(BuildContext context) => StreamBuilder<User?>(
-    stream: FirebaseAuth.instance.authStateChanges(),
-    initialData: FirebaseAuth.instance.currentUser,
+    stream: authStream ?? FirebaseAuth.instance.authStateChanges(),
+    initialData: authStream == null ? FirebaseAuth.instance.currentUser : null,
     builder: (context, auth) {
-      if (auth.data == null) return const HomePage();
+      if (auth.data == null) return const AuthPage(closeOnSuccess: false);
       final user = auth.data!;
       return RoleGate(
         key: ValueKey(user.uid),
