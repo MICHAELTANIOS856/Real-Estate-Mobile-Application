@@ -1,3 +1,58 @@
+## Optional manual demo listings (debug only)
+
+Nothing is seeded automatically. With `flutter run` (debug), sign in as an OWNER,
+open the top menu on My Properties, choose Add demo properties, then confirm.
+This creates at most two fixtures for that owner, rent and sale, with deterministic
+IDs, `isDemo: true`, explicit Arabic demo-only titles/descriptions and a tiny solid
+thumbnail. No real address, person or contact is used. They use the owner's real UID
+so the normal consumer viewing-request flow can be tested with another account.
+
+Sign out and sign in as CONSUMER using a separate email. Find the demo in Luxor
+under rent or sale, open it, and send a test viewing request with your own test
+contact data. It is a Firestore test record, not an actual appointment or message
+to a property owner. To remove fixtures, sign back in as their owner and choose
+Delete my demo properties, then confirm. Only that owner's `isDemo` listings are
+deleted. Real listings cannot be marked demo later or deleted by these rules.
+Test viewing-request records remain, clearly identified by the demo property title;
+clean these separately in an isolated test project if desired. Do not use other
+people's personal data for testing. The menu and seed service are disabled in
+release builds. Marked records already created are NOT automatically removed from
+the database by a release build, so use the cleanup menu before a real demo/release.
+
+The updated Firestore rules must be reviewed and republished for fixture deletion
+and signed-in reads. 34 emulator assertions pass, including fixture ownership,
+real-listing deletion denial, and denial of relabeling a real listing as demo.
+
+---
+
+## Password reset
+
+On sign-in, enter your account email then tap Forgot Password. Firebase Auth
+sends its standard password-reset link by email; the app does not send or handle
+a numeric reset code. Check spam too. The account owner can edit the email in
+Firebase Console > Authentication > Templates > Password reset. No template or
+Firebase settings were changed here. Invalid email and network/rate-limit errors
+have Arabic messages. Missing-account responses use the same neutral confirmation
+as success so the app does not reveal which emails have accounts. Actual email
+delivery and reset completion still need checking on the intended Firebase project.
+
+## Sign-in required before home
+
+Signed-out startup now opens sign-in/sign-up, not the consumer home. After
+successful authentication the persisted role chooses the owner or consumer home.
+Signing out returns to authentication. Listing reads also require Firebase Auth;
+anonymous property reads are denied by the updated Firestore rules. Signed-in
+consumers can browse, while owners still start at their own properties.
+
+Review and republish `firestore.rules` for this change. Keep the current deployed
+rules first and use an isolated test project/emulator if the project is shared.
+This does not enable a paid plan or change existing data. Stop and restart the
+app after pulling. The owner home title is now only My Properties, with no subtitle.
+The updated rules suite passes 34 assertions including anonymous-read denial and
+signed-in consumer read success.
+
+---
+
 ## Account roles and the new start screen
 
 Sign-up now asks for owner or consumer (no default), name, email, password,
@@ -9,8 +64,7 @@ change its role, delete its profile or write someone else's profile.
 
 Owners start directly at My Properties with upload and renewal. They do not see
 the consumer search, governorate filters or rent/sale selector. The upload form
-still asks whether the property is for rent or sale. Consumers and signed-out
-guests retain browsing; consumers cannot upload or renew. Viewing requests require
+still asks whether the property is for rent or sale. Signed-in consumers retain browsing; consumers cannot upload or renew. Viewing requests require
 a consumer account. Owners can open their listing details without a viewing-request
 button. Role checks run in both the client service and Firestore rules.
 
@@ -50,7 +104,7 @@ Switching Git branches DOES NOT roll back deployed Firebase rules. Keep both
 versions and a deliberate deployment rollback plan. No live Firebase rules,
 accounts, data or billing settings were changed while preparing this update.
 
-Verification for this update: 19 automated Flutter tests and 27 actual Firestore
+Verification for this update: 21 automated Flutter tests and 34 actual Firestore
 emulator assertions pass. Phone-width sign-up and owner-start screens were rendered
 and visually checked using fixtures. These checks do not prove live-project Auth,
 profile creation, upload or viewing-request end-to-end behavior. No APK was built.
