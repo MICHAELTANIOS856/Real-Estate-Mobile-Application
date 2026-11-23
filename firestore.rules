@@ -28,7 +28,8 @@ service cloud.firestore {
         && (p.size() < 4 || validPhoto(p[3]));
     }
     function validProperty(d) {
-      return d.keys().hasOnly(['title', 'type', 'governorate', 'location', 'mode', 'price', 'bedrooms', 'bathrooms', 'area', 'description', 'photoBytes', 'ownerId', 'status', 'createdAt', 'lastConfirmedAt'])
+      return d.keys().hasOnly(['title', 'type', 'governorate', 'location', 'mode', 'price', 'bedrooms', 'bathrooms', 'area', 'description', 'photoBytes', 'ownerId', 'status', 'createdAt', 'lastConfirmedAt', 'isDemo'])
+        && (!('isDemo' in d) || d.isDemo == true)
         && d.title is string && d.title.size() > 0 && d.title.size() <= 150
         && d.type is string && d.type.size() <= 50
         && d.governorate is string && d.governorate.size() <= 100
@@ -44,8 +45,8 @@ service cloud.firestore {
         && d.createdAt == request.time && d.lastConfirmedAt == request.time;
     }
     match /properties/{propertyId} {
-      allow read: if resource.data.status == 'available'
-        || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow read: if signedIn() && (resource.data.status == 'available'
+        || resource.data.ownerId == request.auth.uid);
       allow create: if hasRole('owner')
         && request.resource.data.ownerId == request.auth.uid
         && validProperty(request.resource.data);
@@ -55,7 +56,9 @@ service cloud.firestore {
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastConfirmedAt'])
         && request.resource.data.lastConfirmedAt == request.time;
-      allow delete: if false;
+      // Only explicitly marked fixtures may be deleted, by their own owner.
+      allow delete: if hasRole('owner') && resource.data.ownerId == request.auth.uid
+        && ('isDemo' in resource.data) && resource.data.isDemo == true;
     }
     match /viewing_requests/{requestId} {
       allow create: if hasRole('consumer')
