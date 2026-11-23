@@ -1,3 +1,6 @@
+import '../models/account_role.dart';
+import 'account_service.dart';
+
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -51,6 +54,7 @@ class PropertiesService {
     if (uid == null || uid != property.ownerId) {
       throw StateError('Not the owner');
     }
+    await AccountService.requireRole(AccountRole.owner);
     await _firestore.collection('properties').doc(property.id).update({
       'lastConfirmedAt': FieldValue.serverTimestamp(),
     });
@@ -90,6 +94,7 @@ class PropertiesService {
     if (FirebaseAuth.instance.currentUser?.uid != ownerId) {
       throw StateError('Not the signed-in owner');
     }
+    await AccountService.requireRole(AccountRole.owner);
     PropertyPhotos.validate(photos);
     final doc = await _firestore.collection('properties').add({
       'title': title,
