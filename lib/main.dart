@@ -8,7 +8,7 @@ import 'firebase_options.dart';
 import 'models/property.dart';
 import 'screens/add_property_page.dart';
 import 'screens/auth_page.dart';
-import 'screens/my_properties_page.dart';
+import 'screens/account_gate.dart';
 import 'screens/property_details_page.dart';
 import 'services/properties_service.dart';
 
@@ -36,7 +36,7 @@ class RealEstateApp extends StatelessWidget {
       builder: (context, child) {
         return Directionality(textDirection: TextDirection.rtl, child: child!);
       },
-      home: const HomePage(),
+      home: const AccountGate(),
     );
   }
 }
@@ -113,32 +113,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> openAddProperty() async {
-    var user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthPage()),
-      );
-      if (!mounted) return;
-      user = FirebaseAuth.instance.currentUser;
-    }
-
-    if (user == null) return;
-
-    final published = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (context) => const AddPropertyPage()),
-    );
-
-    if (!mounted) return;
-    if (published == true) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('تم نشر عقارك بنجاح')));
-    }
-  }
-
   Future<void> openAccount() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -191,19 +165,6 @@ class _HomePageState extends State<HomePage> {
                   style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.home_work_outlined),
-                  title: const Text('عقاراتي'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      this.context,
-                      MaterialPageRoute(
-                        builder: (_) => const MyPropertiesPage(),
-                      ),
-                    );
-                  },
-                ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -241,16 +202,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: openAddProperty,
-        backgroundColor: const Color(0xFF174C3C),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_home_work_rounded),
-        label: const Text(
-          'أضف عقارك',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
       body: SafeArea(
         child: StreamBuilder<List<Property>>(
           stream: _propertiesStream,
