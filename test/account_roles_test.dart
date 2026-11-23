@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:real_estate_app/screens/auth_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:real_estate_app/models/account_role.dart';
 import 'package:real_estate_app/screens/account_gate.dart';
@@ -7,6 +9,19 @@ import 'package:real_estate_app/screens/owner_home_page.dart';
 import 'renewal_test.dart' show listing;
 
 void main() {
+  testWidgets('signed-out startup shows authentication, never a browse home', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(home: AccountGate(authStream: Stream<User?>.value(null))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AuthPage), findsOneWidget);
+    expect(find.byType(OwnerHomePage), findsNothing);
+    expect(find.text('عقارك'), findsNothing);
+    expect(find.widgetWithText(ElevatedButton, 'تسجيل الدخول'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   test('only known roles are accepted and Egyptian phone is validated', () {
     expect(AccountRole.parse('owner'), AccountRole.owner);
     expect(AccountRole.parse('consumer'), AccountRole.consumer);
