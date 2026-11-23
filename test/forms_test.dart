@@ -10,6 +10,18 @@ Widget host(Widget page) => MaterialApp(
 );
 
 void main() {
+  testWidgets('forgot password requires a valid email without a password', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(const AuthPage()));
+    await tester.tap(find.text('نسيت كلمة المرور؟'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('اكتب بريدًا إلكترونيًا صحيحًا في خانة البريد أولًا'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('sign-in validates missing email and password locally', (
     tester,
   ) async {
