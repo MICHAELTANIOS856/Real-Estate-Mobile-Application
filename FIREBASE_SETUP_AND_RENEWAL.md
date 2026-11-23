@@ -1,8 +1,24 @@
+## Eight sample properties and real listings
+
+The debug owner menu now adds eight varied sample properties based on the original
+sample catalog: rent/sale, apartments/villa/duplex, Cairo/Giza/Alexandria/Luxor and
+varied prices. Four preserve the original sample titles/prices, all prefixed demo
+only. The first fixture is Cairo/rent, visible with the default consumer filters.
+Clear search text and select All governorates to see the current mode's samples.
+An owner must tap Add demo properties once; consumers then see them immediately
+from Firestore. We do not write the user's database ourselves.
+
+The same tap renews existing marked fixtures and adds missing ones, not duplicates.
+It never edits a real listing, even if a real listing has a colliding ID. Cleanup
+checks both ownerId and isDemo. Real and demo listings share the regular feed,
+filter/count, renewal and seven-day expiry behavior. There is no fake-data fallback
+that hides real listings or replaces results when the database is empty.
+
 ## Optional manual demo listings (debug only)
 
 Nothing is seeded automatically. With `flutter run` (debug), sign in as an OWNER,
 open the top menu on My Properties, choose Add demo properties, then confirm.
-This creates at most two fixtures for that owner, rent and sale, with deterministic
+This creates at most eight fixtures for that owner, rent and sale across Cairo/Giza/Alexandria/Luxor, with deterministic
 IDs, `isDemo: true`, explicit Arabic demo-only titles/descriptions and a tiny solid
 thumbnail. No real address, person or contact is used. They use the owner's real UID
 so the normal consumer viewing-request flow can be tested with another account.
@@ -104,7 +120,7 @@ Switching Git branches DOES NOT roll back deployed Firebase rules. Keep both
 versions and a deliberate deployment rollback plan. No live Firebase rules,
 accounts, data or billing settings were changed while preparing this update.
 
-Verification for this update: 21 automated Flutter tests and 34 actual Firestore
+Verification for this update: 27 automated Flutter tests and 34 actual Firestore
 emulator assertions pass. Phone-width sign-up and owner-start screens were rendered
 and visually checked using fixtures. These checks do not prove live-project Auth,
 profile creation, upload or viewing-request end-to-end behavior. No APK was built.
