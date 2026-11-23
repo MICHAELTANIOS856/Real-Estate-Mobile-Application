@@ -33,7 +33,7 @@ class OwnerHomePage extends StatelessWidget {
                 builder: (context) => AlertDialog(
                   title: Text(
                     action == 'create'
-                        ? 'إضافة عقارين وهميين؟'
+                        ? 'إضافة أو تجديد 8 عقارات وهمية؟'
                         : 'حذف عقاراتك التجريبية؟',
                   ),
                   content: const Text(
