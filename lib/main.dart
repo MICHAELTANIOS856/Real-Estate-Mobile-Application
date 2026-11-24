@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'config/app_flags.dart';
 import 'firebase_options.dart';
+import 'services/sample_listings.dart';
 import 'models/property.dart';
 import 'screens/add_property_page.dart';
 import 'screens/auth_page.dart';
@@ -16,6 +18,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  if (kAlwaysStartSignedOut) {
+    try {
+      // Never reuse a remembered session: the user must log in every launch.
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+  }
 
   runApp(const RealEstateApp());
 }
@@ -77,6 +86,7 @@ class _HomePageState extends State<HomePage> {
   ListingMode selectedMode = ListingMode.rent;
   String selectedGovernorate = 'الكل';
   String searchText = '';
+  bool showSamples = kShowSampleListings;
 
   final Set<String> favoriteIds = {};
   late final Stream<List<Property>> _propertiesStream =
@@ -233,9 +243,10 @@ class _HomePageState extends State<HomePage> {
                 !snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final visibleProperties = filterProperties(
-              snapshot.data ?? const <Property>[],
-            );
+            final visibleProperties = filterProperties([
+              ...(snapshot.data ?? const <Property>[]),
+              if (showSamples) ...SampleListings.all,
+            ]);
 
             return CustomScrollView(
               slivers: [
@@ -263,6 +274,22 @@ class _HomePageState extends State<HomePage> {
                     child: _buildModeSelector(),
                   ),
                 ),
+                if (kShowSampleListings)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                      child: SwitchListTile(
+                        value: showSamples,
+                        onChanged: (v) => setState(() => showSamples = v),
+                        title: const Text('عرض العقارات التجريبية'),
+                        subtitle: const Text(
+                          'عقارات مدمجة في التطبيق للتجربة فقط، تظهر بعبارة "تجريبي فقط"',
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: const Color(0xFF174C3C),
+                      ),
+                    ),
+                  ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
