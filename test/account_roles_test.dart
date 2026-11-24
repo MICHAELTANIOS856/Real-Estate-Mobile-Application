@@ -1,3 +1,4 @@
+import 'package:real_estate_app/main.dart' show HomePage;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:real_estate_app/screens/auth_page.dart';
@@ -18,7 +19,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AuthPage), findsOneWidget);
     expect(find.byType(OwnerHomePage), findsNothing);
-    expect(find.text('عقارك'), findsNothing);
+    expect(find.byType(HomePage), findsNothing);
     expect(find.widgetWithText(ElevatedButton, 'تسجيل الدخول'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
