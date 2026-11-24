@@ -271,7 +271,16 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           ),
         ],
       ),
-      bottomNavigationBar: !widget.allowViewingRequest
+      bottomNavigationBar: widget.property.isSample
+          ? const SafeArea(
+              minimum: EdgeInsets.fromLTRB(20, 10, 20, 16),
+              child: Text(
+                'عقار تجريبي للعرض فقط، لا يمكن طلب معاينة له',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          : !widget.allowViewingRequest
           ? null
           : SafeArea(
               minimum: const EdgeInsets.fromLTRB(20, 10, 20, 16),
