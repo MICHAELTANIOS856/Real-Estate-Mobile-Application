@@ -24,6 +24,7 @@ class Property {
     this.createdAt,
     this.lastConfirmedAt,
     this.expiresAt,
+    this.isSample = false,
   });
 
   final String id;
@@ -44,6 +45,9 @@ class Property {
   final DateTime? createdAt;
   final DateTime? lastConfirmedAt;
   final DateTime? expiresAt;
+
+  /// Built-in app sample, not a Firestore record.
+  final bool isSample;
   bool get isExpired =>
       expiresAt == null || !expiresAt!.isAfter(DateTime.now());
   String? get renewalNotice {
